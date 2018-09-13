@@ -132,9 +132,9 @@ embedding_layer = Embedding(num_words,
                             trainable=False)
 
 for POS_WEIGHT in [1, 5, 10]:
-    for DROPOUT in [0.1, 0.25, 0.5]:
-        for REGULARIZATION in [0.001, 0.01, 0.1]:
-            for BATCH_SIZE in [256]:
+    for DROPOUT in [0.1, 0.25]:
+        for REGULARIZATION in [0.1, 1.0, 5.0]:
+            for BATCH_SIZE in [64]:
                 
                 params ={"pos_weight": str(POS_WEIGHT), 
                           "dropout": str(DROPOUT), 
@@ -184,7 +184,7 @@ for POS_WEIGHT in [1, 5, 10]:
                               metrics=['categorical_accuracy'])
                 history = model.fit(data, labels, validation_split=0.2,
                           epochs=NUM_EPOCHS, batch_size=BATCH_SIZE)          
-                model.save("models/model_%(pos_weight)s_%(dropout)s_%(regularization)s_%(batch_size)s.h5"%params)
+                #model.save("models/model_%(pos_weight)s_%(dropout)s_%(regularization)s_%(batch_size)s.h5"%params)
                 
                 acc = history.history['categorical_accuracy']
                 val_acc = history.history['val_categorical_accuracy']
