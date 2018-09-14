@@ -27,7 +27,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 import matplotlib.pyplot as plt
 
-CLEANUP_DATA = False # save time by loading a cleaned up version from disc
+CLEANUP_DATA = True # save time by loading a cleaned up version from disc
 MAX_NUM_WORDS = 20000 # max. size of vocabulary
 EMBEDDING_DIM = 100 # dimension of GloVe word embeddings
 MAX_SEQUENCE_LENGTH = 1000 # truncate examples after MAX_SEQUENCE_LENGTH words
@@ -71,17 +71,17 @@ def cleanup_abstract(xmlstring):
     except:
         text = xmlstring
     # remove stopwords and punctuation. lower case everything
-    #stop_words = set(stopwords.words('english'))
-    #tokens = word_tokenize(text)
-    #tokens = [w.lower() for w in tokens if not w in stop_words and w.isalpha() and wordnet.synsets(w)]
+    stop_words = set(stopwords.words('english'))
+    tokens = word_tokenize(text)
+    tokens = [w.lower() for w in tokens if not w in stop_words and w.isalpha() and wordnet.synsets(w)]
     # lemmatize
-    #lemma = WordNetLemmatizer()
-    #final_tokens = []
-    #for word in tokens:
-    #    final_tokens.append(lemma.lemmatize(word))
-    #ret = " ".join(final_tokens)
-    #return ret
-    return text
+    lemma = WordNetLemmatizer()
+    final_tokens = []
+    for word in tokens:
+        final_tokens.append(lemma.lemmatize(word))
+    ret = " ".join(final_tokens)
+    return ret
+    #return text
 
 
 if CLEANUP_DATA:
