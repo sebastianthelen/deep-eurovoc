@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 CLEANUP_DATA = True # save time by loading a cleaned up version from disc
 MAX_NUM_WORDS = 20000 # max. size of vocabulary
 EMBEDDING_DIM = 100 # dimension of GloVe word embeddings
-MAX_SEQUENCE_LENGTH = 1000 # truncate examples after MAX_SEQUENCE_LENGTH words
+MAX_SEQUENCE_LENGTH = 500 # truncate examples after MAX_SEQUENCE_LENGTH words
 VALIDATION_SPLIT = 0.2 # ration for split of training data and test data
 NUM_EPOCHS = 10 # number of epochs the network is trained
 # those are the eurovoc fields we want to support
@@ -70,18 +70,7 @@ def cleanup_abstract(xmlstring):
         text = xpath_result[0].text
     except:
         text = xmlstring
-    # remove stopwords and punctuation. lower case everything
-    stop_words = set(stopwords.words('english'))
-    tokens = word_tokenize(text)
-    tokens = [w.lower() for w in tokens if not w in stop_words and w.isalpha() and wordnet.synsets(w)]
-    # lemmatize
-    lemma = WordNetLemmatizer()
-    final_tokens = []
-    for word in tokens:
-        final_tokens.append(lemma.lemmatize(word))
-    ret = " ".join(final_tokens)
-    return ret
-    #return text
+    return text
 
 
 if CLEANUP_DATA:
@@ -90,9 +79,7 @@ if CLEANUP_DATA:
     data_df = data_df[data_df.astype(str)['clean_concepts'] != '[]']
     data_df.drop(["abstract"], axis=1)
     data_df.drop(["concepts"], axis=1)
-    data_df.to_pickle("data_df.pkl")
     
-data_df = pd.read_pickle("data_df.pkl")
 
 labels = data_df["clean_concepts"].tolist()
 mlb = MultiLabelBinarizer()
@@ -122,8 +109,6 @@ for word, i in word_index.items():
     if embedding_vector is not None:
         # words not found in embedding index will be all-zeros.
         embedding_matrix[i] = embedding_vector
-    #else:
-    #    print("Not not in embedding index: " + word)
     
 embedding_layer = Embedding(num_words,
                             EMBEDDING_DIM,
@@ -131,78 +116,55 @@ embedding_layer = Embedding(num_words,
                             input_length=MAX_SEQUENCE_LENGTH,
                             trainable=False)
 
-for POS_WEIGHT in [1, 5, 10]:
-    for DROPOUT in [0.1, 0.25]:
-        for REGULARIZATION in [0.1, 1.0, 5.0]:
-            for BATCH_SIZE in [64]:
-                
-                params ={"pos_weight": str(POS_WEIGHT), 
-                          "dropout": str(DROPOUT), 
-                          "regularization": str(REGULARIZATION), 
-                          "batch_size": str(BATCH_SIZE)}
-                
-                def weighted_binary_crossentropy(target, output):
-                    """
-                    Weighted binary crossentropy between an output tensor 
-                    and a target tensor. POS_WEIGHT is used as a multiplier 
-                    for the positive targets.
+for DROPOUT in [0.1, 0.25]:
+    for REGULARIZATION in [1.0, 5.0, 10.0]:
+        for BATCH_SIZE in [64]:
+            
+            params ={ "dropout": str(DROPOUT), 
+                      "regularization": str(REGULARIZATION), 
+                      "batch_size": str(BATCH_SIZE)}
 
-                    Combination of the following functions:
-                    * keras.losses.binary_crossentropy
-                    * keras.backend.tensorflow_backend.binary_crossentropy
-                    * tf.nn.weighted_cross_entropy_with_logits
-                    """
-                    # transform back to logits
-                    _epsilon = tfb._to_tensor(tfb.epsilon(), output.dtype.base_dtype)
-                    output = tf.clip_by_value(output, _epsilon, 1 - _epsilon)
-                    output = tf.log(output / (1 - output))
-                    # compute weighted loss
-                    loss = tf.nn.weighted_cross_entropy_with_logits(targets=target,
-                                                                    logits=output,
-                                                                    pos_weight=POS_WEIGHT)
-                    return tf.reduce_mean(loss, axis=-1)
+            sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
+            embedded_sequences = embedding_layer(sequence_input)
+            x = Conv1D(128, 5, activation='relu', kernel_regularizer=regularizers.l2(REGULARIZATION))(embedded_sequences)
+            x = MaxPooling1D(5)(x)
+            x = Conv1D(128, 5, activation='relu', kernel_regularizer=regularizers.l2(REGULARIZATION))(x)
+            x = MaxPooling1D(5)(x)
+            x = Conv1D(128, 3, activation='relu', kernel_regularizer=regularizers.l2(REGULARIZATION))(x)
+            #x = MaxPooling1D(5)(x)  # global max pooling
+            x = Flatten()(x)
+            x = Dropout(DROPOUT)(x)
+            x = Dense(128, activation='relu',kernel_regularizer=regularizers.l2(REGULARIZATION))(x)
+            x = Dropout(DROPOUT)(x)
+            preds = Dense(labels.shape[1], activation='sigmoid', kernel_regularizer=regularizers.l2(REGULARIZATION))(x)
 
-                sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
-                embedded_sequences = embedding_layer(sequence_input)
-                x = Conv1D(128, 5, activation='relu', kernel_regularizer=regularizers.l2(REGULARIZATION))(embedded_sequences)
-                x = MaxPooling1D(5)(x)
-                x = Conv1D(128, 5, activation='relu', kernel_regularizer=regularizers.l2(REGULARIZATION))(x)
-                x = MaxPooling1D(5)(x)
-                x = Conv1D(128, 5, activation='relu', kernel_regularizer=regularizers.l2(REGULARIZATION))(x)
-                x = MaxPooling1D(35)(x)  # global max pooling
-                x = Flatten()(x)
-                x = Dropout(DROPOUT)(x)
-                x = Dense(128, activation='relu',kernel_regularizer=regularizers.l2(REGULARIZATION))(x)
-                x = Dropout(DROPOUT)(x)
-                preds = Dense(labels.shape[1], activation='sigmoid', kernel_regularizer=regularizers.l2(REGULARIZATION))(x)
+            model = Model(sequence_input, preds)
+            model.compile(loss='binary_crossentropy',
+                          optimizer='adam',
+                          metrics=['categorical_accuracy'])
 
-                keras.losses.weighted_binary_crossentropy = weighted_binary_crossentropy
+            print(model.summary())
 
-                model = Model(sequence_input, preds)
-                model.compile(loss='weighted_binary_crossentropy',
-                              optimizer='adam',
-                              metrics=['categorical_accuracy'])
-                history = model.fit(data, labels, validation_split=0.2,
-                          epochs=NUM_EPOCHS, batch_size=BATCH_SIZE)          
-                #model.save("models/model_%(pos_weight)s_%(dropout)s_%(regularization)s_%(batch_size)s.h5"%params)
-                
-                acc = history.history['categorical_accuracy']
-                val_acc = history.history['val_categorical_accuracy']
-                loss = history.history['loss']
-                val_loss = history.history['val_loss']
-                epochs = range(len(acc))
-                fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
-                ax1.plot(epochs, acc, label='Training acc')
-                ax1.plot(epochs, val_acc, label='Validation acc')
-                ax1.set_ylabel('accuracy')
-                ax1.set_xlabel('epoch')
-                ax1.set_title('Accuracy: PW %(pos_weight)s, DO %(dropout)s, REG %(regularization)s, BATCH %(batch_size)s'% params)
-                ax1.legend()
-                ax2.plot(epochs, loss, label='Training loss')
-                ax2.plot(epochs, val_loss, label='Validation loss')
-                ax2.set_ylabel('loss')
-                ax2.set_xlabel('epoch')
-                ax2.set_title('Loss: PW %(pos_weight)s, DO %(dropout)s, REG %(regularization)s, BATCH %(batch_size)s'%params)
-                ax2.legend()
-                fig.savefig("figures/model_%(pos_weight)s_%(dropout)s_%(regularization)s_%(batch_size)s.png"%params)
-                
+            history = model.fit(data, labels, validation_split=0.2,
+                      epochs=NUM_EPOCHS, batch_size=BATCH_SIZE)          
+            
+            acc = history.history['categorical_accuracy']
+            val_acc = history.history['val_categorical_accuracy']
+            loss = history.history['loss']
+            val_loss = history.history['val_loss']
+            epochs = range(len(acc))
+            fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
+            ax1.plot(epochs, acc, label='Training acc')
+            ax1.plot(epochs, val_acc, label='Validation acc')
+            ax1.set_ylabel('accuracy')
+            ax1.set_xlabel('epoch')
+            ax1.set_title('Accuracy: PW %(pos_weight)s, DO %(dropout)s, REG %(regularization)s, BATCH %(batch_size)s'% params)
+            ax1.legend()
+            ax2.plot(epochs, loss, label='Training loss')
+            ax2.plot(epochs, val_loss, label='Validation loss')
+            ax2.set_ylabel('loss')
+            ax2.set_xlabel('epoch')
+            ax2.set_title('Loss: PW %(pos_weight)s, DO %(dropout)s, REG %(regularization)s, BATCH %(batch_size)s'%params)
+            ax2.legend()
+            fig.savefig("figures/model_%(pos_weight)s_%(dropout)s_%(regularization)s_%(batch_size)s.png"%params)
+            
