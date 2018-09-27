@@ -100,8 +100,8 @@ tmp_labels = multilabel_binarizer.classes_
 for (i, label) in enumerate(multilabel_binarizer.classes_):
     print("{}. {}".format(i + 1, label))
 
-#grouped_labels['class_weight'] = len(grouped_labels) / grouped_labels['count']
-grouped_labels['class_weight'] = 1 / grouped_labels['count']
+grouped_labels['class_weight'] = len(grouped_labels) / grouped_labels['count']
+#grouped_labels['class_weight'] = 1 / grouped_labels['count']
 class_weight = {}
 for index, label in enumerate(tmp_labels):
     class_weight[index] = grouped_labels[grouped_labels['index'] == label]['class_weight'].values[0]    
@@ -224,7 +224,7 @@ def hamming(y_true, y_pred):
         return (nominator / denominator)
 
 VALIDATION_SPLIT = 0.2 # ration for split of training data and test data
-NUM_EPOCHS = 200 # number of epochs the network is trained
+NUM_EPOCHS = 2 # number of epochs the network is trained
 DROPOUT = 0.2
 #REGULARIZATION = 0.1
 BATCH_SIZE = 64
