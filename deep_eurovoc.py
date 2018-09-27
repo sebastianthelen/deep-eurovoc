@@ -86,6 +86,12 @@ data_df = data_df[data_df.astype(str)['clean_concepts'] != '[]']
 data_df.drop(["abstract"], axis=1)
 data_df.drop(["concepts"], axis=1)
 print(data_df[['clean_abstract', 'clean_concepts']][:10])
+
+tmp = []
+data_df["clean_concepts"].apply(lambda x: tmp.extend(x))
+s = pd.Series(data=tmp)
+grouped_labels = s.groupby(s).size().reset_index(name='count')
+print(grouped_labels)
     
 
 multilabel_binarizer = MultiLabelBinarizer()
@@ -218,7 +224,7 @@ def hamming(y_true, y_pred):
         return (nominator / denominator)
 
 VALIDATION_SPLIT = 0.2 # ration for split of training data and test data
-NUM_EPOCHS = 20 # number of epochs the network is trained
+NUM_EPOCHS = 1 # number of epochs the network is trained
 DROPOUT = 0.2
 #REGULARIZATION = 0.1
 BATCH_SIZE = 64
@@ -231,7 +237,7 @@ model.add(GRU(128, dropout=0.25))
 model.add(Dense(labels.shape[1], activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[hamming, f1, precision, recall])
 
-history = model.fit(train_data, train_labels, class_weight=class_weight, validation_split=VALIDATION_SPLIT,
+history = model.fit(train_data[:1000], train_labels[:1000], class_weight=class_weight, validation_split=VALIDATION_SPLIT,
           epochs=NUM_EPOCHS, batch_size=BATCH_SIZE)
 
 model.save("models/model_EP_%s_DO_%s_BAT_%s_LR_%s.h5" % (str(NUM_EPOCHS), 
@@ -239,18 +245,18 @@ model.save("models/model_EP_%s_DO_%s_BAT_%s_LR_%s.h5" % (str(NUM_EPOCHS),
                                                         str(BATCH_SIZE), 
                                                         str(LR)))
 
-loss = history2.history['loss']
-val_loss = history2.history['val_loss']
-ham = history2.history['hamming']
-val_ham = history2.history['val_hamming']
-f1 = history2.history['f1']
-val_f1 = history2.history['val_f1']
-prec = history2.history['precision']
-val_prec = history2.history['val_precision']
-rec = history2.history['recall']
-val_rec = history2.history['val_recall']
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+ham = history.history['hamming']
+val_ham = history.history['val_hamming']
+f1 = history.history['f1']
+val_f1 = history.history['val_f1']
+prec = history.history['precision']
+val_prec = history.history['val_precision']
+rec = history.history['recall']
+val_rec = history.history['val_recall']
 
-epochs = range(len(hams))                
+epochs = range(len(ham))                
 fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(nrows=1, ncols=5, figsize=(25, 5))
 ax1.plot(epochs, ham, label='Training ham')
 ax1.plot(epochs, val_ham, label='Validation ham')
