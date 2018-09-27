@@ -237,7 +237,7 @@ model.add(GRU(128, dropout=0.25))
 model.add(Dense(labels.shape[1], activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[hamming, f1, precision, recall])
 
-history = model.fit(train_data[:1000], train_labels[:1000], class_weight=class_weight, validation_split=VALIDATION_SPLIT,
+history = model.fit(train_data, train_labels, class_weight=class_weight, validation_split=VALIDATION_SPLIT,
           epochs=NUM_EPOCHS, batch_size=BATCH_SIZE)
 
 model.save("models/model_EP_%s_DO_%s_BAT_%s_LR_%s.h5" % (str(NUM_EPOCHS), 
@@ -296,7 +296,6 @@ fig.savefig("figures/model_EP_%s_DO_%s_BAT_%s_LR_%s.png" % (str(NUM_EPOCHS),
                                                         str(LR)))
 
 score = model.evaluate(cross_data, cross_labels, batch_size=BATCH_SIZE)
-score = model.evaluate(x_test, y_test, verbose=0)
 print('Cross loss:', score[0])
 print('Cross hamming:', score[1])
 print('Cross f1:', score[2])
