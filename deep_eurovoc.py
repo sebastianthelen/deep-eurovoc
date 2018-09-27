@@ -224,7 +224,7 @@ def hamming(y_true, y_pred):
         return (nominator / denominator)
 
 VALIDATION_SPLIT = 0.2 # ration for split of training data and test data
-NUM_EPOCHS = 1 # number of epochs the network is trained
+NUM_EPOCHS = 200 # number of epochs the network is trained
 DROPOUT = 0.2
 #REGULARIZATION = 0.1
 BATCH_SIZE = 64
