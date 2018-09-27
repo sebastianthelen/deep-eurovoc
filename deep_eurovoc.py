@@ -224,27 +224,28 @@ def hamming(y_true, y_pred):
         return (nominator / denominator)
 
 VALIDATION_SPLIT = 0.2 # ration for split of training data and test data
-NUM_EPOCHS = 150 # number of epochs the network is trained
-DROPOUT = 0.5
-#REGULARIZATION = 0.1
+NUM_EPOCHS = 30 # number of epochs the network is trained
+DROPOUT = 0.75
+REGULARIZATION = 0.01
 BATCH_SIZE = 64
 LR = 0.005
 
 model = Sequential()
-model.add(Embqedding(MAX_NUM_WORDS, EMBEDDING_DIM,input_length = MAX_SEQUENCE_LENGTH))
+model.add(Embedding(MAX_NUM_WORDS, EMBEDDING_DIM,input_length = MAX_SEQUENCE_LENGTH))
 model.add(Dropout(DROPOUT))
 model.add(CuDNNGRU(128, return_sequences=True))
 model.add(Dropout(DROPOUT))
 model.add(CuDNNGRU(128))
 model.add(Dropout(DROPOUT))
-model.add(Dense(labels.shape[1], activation='sigmoid'))
+model.add(Dense(labels.shape[1], kernel_regularizer=regularizers.l2(REGULARIZATION), activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[hamming, f1, precision, recall])
 
 history = model.fit(train_data, train_labels, class_weight=class_weight, validation_split=VALIDATION_SPLIT,
           epochs=NUM_EPOCHS, batch_size=BATCH_SIZE)
 
-model.save("models/model_EP_%s_DO_%s_BAT_%s_LR_%s.h5" % (str(NUM_EPOCHS), 
-                                                        str(DROPOUT), 
+model.save("models/model_EP_%s_DO_%s_REG_%s_BAT_%s_LR_%s.h5" % (str(NUM_EPOCHS), 
+                                                        str(DROPOUT),
+                                                        str(REGULARIZATION), 
                                                         str(BATCH_SIZE), 
                                                         str(LR)))
 
@@ -293,8 +294,9 @@ ax5.set_ylabel('recall')
 ax5.set_xlabel('epoch')
 ax5.set_title('Recall')
 ax5.legend()
-fig.savefig("figures/model_EP_%s_DO_%s_BAT_%s_LR_%s.png" % (str(NUM_EPOCHS), 
-                                                        str(DROPOUT), 
+fig.savefig("figures/model_EP_%s_DO_%s_REG_%s_BAT_%s_LR_%s.png" % (str(NUM_EPOCHS), 
+                                                        str(DROPOUT),
+                                                        str(REGULARIZATION), 
                                                         str(BATCH_SIZE), 
                                                         str(LR)))
 
