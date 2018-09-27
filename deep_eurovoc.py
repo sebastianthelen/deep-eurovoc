@@ -15,7 +15,7 @@ from keras.layers import Dense, Input, GlobalMaxPooling1D, Flatten
 from keras.layers import Conv1D, MaxPooling1D, Embedding
 from keras.models import Model
 from keras.initializers import Constant
-from keras.layers import Dropout
+from keras.layers import Dropout, CuDNNGRU
 from keras import regularizers
 from keras import backend as K
 from keras.models import Sequential
@@ -224,7 +224,7 @@ def hamming(y_true, y_pred):
         return (nominator / denominator)
 
 VALIDATION_SPLIT = 0.2 # ration for split of training data and test data
-NUM_EPOCHS = 2 # number of epochs the network is trained
+NUM_EPOCHS = 150 # number of epochs the network is trained
 DROPOUT = 0.2
 #REGULARIZATION = 0.1
 BATCH_SIZE = 64
@@ -232,8 +232,10 @@ LR = 0.005
 
 model = Sequential()
 model.add(Embedding(MAX_NUM_WORDS, EMBEDDING_DIM,input_length = MAX_SEQUENCE_LENGTH))
-model.add(GRU(128, dropout=0.25, return_sequences=True))
-model.add(GRU(128, dropout=0.25))
+model.add(Dropout(DROPOUT))
+model.add(CuDNNGRU(128, return_sequences=True))
+model.add(CuDNNGRU(128))
+model.add(Dropout(DROPOUT))
 model.add(Dense(labels.shape[1], activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[hamming, f1, precision, recall])
 
