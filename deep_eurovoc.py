@@ -225,8 +225,8 @@ def hamming(y_true, y_pred):
 
 VALIDATION_SPLIT = 0.2 # ration for split of training data and test data
 NUM_EPOCHS = 30 # number of epochs the network is trained
-DROPOUT = 0.75
-REGULARIZATION = 0.01
+DROPOUT = 0.8
+REGULARIZATION = 0.0000
 BATCH_SIZE = 64
 LR = 0.005
 
@@ -237,7 +237,7 @@ model.add(CuDNNGRU(128, return_sequences=True))
 model.add(Dropout(DROPOUT))
 model.add(CuDNNGRU(128))
 model.add(Dropout(DROPOUT))
-model.add(Dense(labels.shape[1], kernel_regularizer=regularizers.l2(REGULARIZATION), activation='sigmoid'))
+model.add(Dense(labels.shape[1], activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[hamming, f1, precision, recall])
 
 history = model.fit(train_data, train_labels, class_weight=class_weight, validation_split=VALIDATION_SPLIT,
