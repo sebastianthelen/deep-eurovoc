@@ -225,15 +225,16 @@ def hamming(y_true, y_pred):
 
 VALIDATION_SPLIT = 0.2 # ration for split of training data and test data
 NUM_EPOCHS = 150 # number of epochs the network is trained
-DROPOUT = 0.2
+DROPOUT = 0.5
 #REGULARIZATION = 0.1
 BATCH_SIZE = 64
 LR = 0.005
 
 model = Sequential()
-model.add(Embedding(MAX_NUM_WORDS, EMBEDDING_DIM,input_length = MAX_SEQUENCE_LENGTH))
+model.add(Embqedding(MAX_NUM_WORDS, EMBEDDING_DIM,input_length = MAX_SEQUENCE_LENGTH))
 model.add(Dropout(DROPOUT))
 model.add(CuDNNGRU(128, return_sequences=True))
+model.add(Dropout(DROPOUT))
 model.add(CuDNNGRU(128))
 model.add(Dropout(DROPOUT))
 model.add(Dense(labels.shape[1], activation='sigmoid'))
